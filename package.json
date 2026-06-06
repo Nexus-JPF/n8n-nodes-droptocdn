@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-droptocdn",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Upload files to Drop to CDN and get instant public CDN URLs",
   "license": "MIT",
   "homepage": "https://droptocdn.com",
