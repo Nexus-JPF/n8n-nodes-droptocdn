@@ -1,0 +1,18 @@
+{
+  "node": "n8n-nodes-droptocdn",
+  "nodeVersion": "1.0",
+  "codexVersion": "1.0",
+  "categories": ["Data & Storage", "Development"],
+  "resources": {
+    "credentialDocumentation": [
+      {
+        "url": "https://github.com/Nexus-JPF/droptocdn/blob/main/docs/integrations/n8n.md#credentials"
+      }
+    ],
+    "primaryDocumentation": [
+      {
+        "url": "https://github.com/Nexus-JPF/droptocdn/blob/main/docs/integrations/n8n.md"
+      }
+    ]
+  }
+}
