@@ -1,3 +1,4 @@
+import FormData from 'form-data';
 import type {
 	IDataObject,
 	IExecuteFunctions,
@@ -155,21 +156,17 @@ export class DropToCdn implements INodeType {
 						const binaryData = this.helpers.assertBinaryData(itemIndex, binaryPropertyName);
 						const buffer = await this.helpers.getBinaryDataBuffer(itemIndex, binaryPropertyName);
 
-						const body: IDataObject = {
-							file: {
-								value: buffer,
-								options: {
-									filename: binaryData.fileName ?? 'upload',
-									contentType: binaryData.mimeType,
-								},
-							},
-						};
+						const form = new FormData();
+						form.append('file', buffer, {
+							filename: binaryData.fileName ?? 'upload',
+							contentType: binaryData.mimeType,
+						});
 
 						if (retentionDays) {
-							body.retention_days = retentionDays;
+							form.append('retention_days', String(retentionDays));
 						}
 						if (neverExpire) {
-							body.never_expire = 'true';
+							form.append('never_expire', 'true');
 						}
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
@@ -178,7 +175,8 @@ export class DropToCdn implements INodeType {
 							{
 								method: 'POST',
 								url: `${BASE_URL}/files`,
-								body,
+								body: form,
+								headers: form.getHeaders(),
 							},
 						);
 
