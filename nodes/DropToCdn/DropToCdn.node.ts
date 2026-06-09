@@ -1,14 +1,49 @@
-import FormData from 'form-data';
 import type {
 	IDataObject,
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	JsonObject,
 } from 'n8n-workflow';
-import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
+import { NodeApiError, NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
 const BASE_URL = 'https://api.droptocdn.com/v1';
+
+type MultipartPart = {
+	name: string;
+	value: string | Buffer;
+	filename?: string;
+	contentType?: string;
+};
+
+function buildMultipartBody(parts: MultipartPart[]): { body: Buffer; contentType: string } {
+	const boundary = `----n8nFormBoundary${Date.now()}${Math.random().toString(36).slice(2)}`;
+	const chunks: Buffer[] = [];
+
+	for (const part of parts) {
+		let header = `--${boundary}\r\nContent-Disposition: form-data; name="${part.name}"`;
+		if (part.filename) {
+			const safeName = part.filename.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+			header += `; filename="${safeName}"`;
+		}
+		header += '\r\n';
+		if (part.contentType) {
+			header += `Content-Type: ${part.contentType}\r\n`;
+		}
+		header += '\r\n';
+		chunks.push(Buffer.from(header, 'utf8'));
+		chunks.push(typeof part.value === 'string' ? Buffer.from(part.value, 'utf8') : part.value);
+		chunks.push(Buffer.from('\r\n', 'utf8'));
+	}
+
+	chunks.push(Buffer.from(`--${boundary}--\r\n`, 'utf8'));
+
+	return {
+		body: Buffer.concat(chunks),
+		contentType: `multipart/form-data; boundary=${boundary}`,
+	};
+}
 
 export class DropToCdn implements INodeType {
 	description: INodeTypeDescription = {
@@ -156,18 +191,23 @@ export class DropToCdn implements INodeType {
 						const binaryData = this.helpers.assertBinaryData(itemIndex, binaryPropertyName);
 						const buffer = await this.helpers.getBinaryDataBuffer(itemIndex, binaryPropertyName);
 
-						const form = new FormData();
-						form.append('file', buffer, {
-							filename: binaryData.fileName ?? 'upload',
-							contentType: binaryData.mimeType,
-						});
+						const parts: MultipartPart[] = [
+							{
+								name: 'file',
+								value: buffer,
+								filename: binaryData.fileName ?? 'upload',
+								contentType: binaryData.mimeType ?? 'application/octet-stream',
+							},
+						];
 
 						if (retentionDays) {
-							form.append('retention_days', String(retentionDays));
+							parts.push({ name: 'retention_days', value: String(retentionDays) });
 						}
 						if (neverExpire) {
-							form.append('never_expire', 'true');
+							parts.push({ name: 'never_expire', value: 'true' });
 						}
+
+						const { body, contentType } = buildMultipartBody(parts);
 
 						const response = await this.helpers.httpRequestWithAuthentication.call(
 							this,
@@ -175,8 +215,11 @@ export class DropToCdn implements INodeType {
 							{
 								method: 'POST',
 								url: `${BASE_URL}/files`,
-								body: form,
-								headers: form.getHeaders(),
+								body,
+								headers: {
+									'Content-Type': contentType,
+									'Content-Length': body.length,
+								},
 							},
 						);
 
@@ -242,7 +285,7 @@ export class DropToCdn implements INodeType {
 					throw error;
 				}
 
-				throw new NodeOperationError(this.getNode(), error as Error, { itemIndex });
+				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex });
 			}
 		}
 

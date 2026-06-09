@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-droptocdn",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Upload files to Drop to CDN and get instant public CDN URLs",
   "license": "MIT",
   "homepage": "https://droptocdn.com",
@@ -46,9 +46,6 @@
     "nodes": [
       "dist/nodes/DropToCdn/DropToCdn.node.js"
     ]
-  },
-  "dependencies": {
-    "form-data": "^4.0.2"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^8.35.0",
